@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS members_moderation_types (
+  id BIGSERIAL PRIMARY KEY,
+  key VARCHAR(64) NOT NULL,
+  title VARCHAR(64) NOT NULL,
+  description VARCHAR(256) NOT NULL,
+  position SMALLINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  CONSTRAINT uniq_members_moderation_types_key UNIQUE (key)
+);

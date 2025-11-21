@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS admins (
+  id BIGSERIAL PRIMARY KEY,
+  uid BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  region_id BIGINT, -- nullable
+  is_active BOOLEAN NOT NULL DEFAULT FALSE,
+  is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  CONSTRAINT uniq_admins_uid UNIQUE (uid),
+  CONSTRAINT fk_admins_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_admins_region FOREIGN KEY (region_id) REFERENCES geo_regions(id) ON DELETE CASCADE
+);

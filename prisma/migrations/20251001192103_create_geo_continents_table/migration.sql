@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS geo_continents (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  CONSTRAINT uniq_geo_continents_name UNIQUE (name)
+);

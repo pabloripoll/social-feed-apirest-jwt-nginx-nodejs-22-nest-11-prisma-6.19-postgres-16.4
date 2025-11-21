@@ -1,0 +1,346 @@
+generator client {
+  provider    = "prisma-client-js"
+  engineType  = "binary"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model admins {
+  id          BigInt       @id @default(autoincrement())
+  uid         BigInt       @unique(map: "uniq_admins_uid")
+  user_id     BigInt
+  region_id   BigInt?
+  is_active   Boolean      @default(false)
+  is_banned   Boolean      @default(false)
+  created_at  DateTime     @db.Timestamp(6)
+  updated_at  DateTime     @db.Timestamp(6)
+  geo_regions geo_regions? @relation(fields: [region_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_admins_region")
+  users       users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_admins_user")
+}
+
+model admins_access_logs {
+  id             BigInt   @id @default(autoincrement())
+  user_id        BigInt
+  is_terminated  Boolean  @default(false)
+  is_expired     Boolean  @default(false)
+  expires_at     DateTime @db.Timestamp(6)
+  refresh_count  Int      @default(0)
+  created_at     DateTime @db.Timestamp(6)
+  updated_at     DateTime @db.Timestamp(6)
+  ip_address     String?  @db.VarChar(45)
+  user_agent     String?
+  requests_count Int      @default(0)
+  payload        Json?    @db.Json
+  token          String
+  users          users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_admins_access_logs_user")
+
+  @@index([expires_at], map: "idx_admins_access_logs_expires_at")
+  @@index([token], map: "idx_admins_access_logs_token")
+}
+
+model admins_profile {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt
+  nickname   String   @unique(map: "uniq_admins_profile_nickname") @db.VarChar(32)
+  avatar     String?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_admins_profile_user")
+}
+
+model feed_categories {
+  id                          BigInt       @id @default(autoincrement())
+  key                         String       @unique(map: "uniq_feed_categories_key") @db.VarChar(64)
+  title                       String       @db.VarChar(64)
+  visits_count                Int          @default(0)
+  feed_posts_count            Int          @default(0)
+  feed_posts_votes_up_count   Int          @default(0)
+  feed_posts_votes_down_count Int          @default(0)
+  created_at                  DateTime     @db.Timestamp(6)
+  updated_at                  DateTime     @db.Timestamp(6)
+  feed_posts                  feed_posts[]
+}
+
+model feed_posts {
+  id                  BigInt                @id @default(autoincrement())
+  uid                 BigInt                @unique(map: "uniq_posts_uid")
+  user_id             BigInt
+  region_id           BigInt
+  category_id         BigInt
+  is_active           Boolean               @default(false)
+  is_draft            Boolean               @default(false)
+  is_banned           Boolean               @default(false)
+  visits_count        Int                   @default(0)
+  reports_count       Int                   @default(0)
+  votes_up_count      Int                   @default(0)
+  votes_down_count    Int                   @default(0)
+  title               String?               @db.VarChar(128)
+  slug                String?               @db.VarChar(128)
+  summary             String?               @db.VarChar(256)
+  article             String?
+  created_at          DateTime              @db.Timestamp(6)
+  updated_at          DateTime              @db.Timestamp(6)
+  feed_categories     feed_categories       @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_category")
+  geo_regions         geo_regions           @relation(fields: [region_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_region_id")
+  users               users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_user_id")
+  feed_posts_visits   feed_posts_visits[]
+  feed_posts_votes    feed_posts_votes[]
+  feed_reports        feed_reports[]
+  members_moderations members_moderations[]
+}
+
+model feed_posts_visits {
+  id                                             BigInt     @id @default(autoincrement())
+  user_id                                        BigInt
+  post_id                                        BigInt
+  visitor_user_id                                BigInt
+  created_at                                     DateTime   @db.Timestamp(6)
+  updated_at                                     DateTime   @db.Timestamp(6)
+  feed_posts                                     feed_posts @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_visits_post_id")
+  users_feed_posts_visits_user_idTousers         users      @relation("feed_posts_visits_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_visits_user_id")
+  users_feed_posts_visits_visitor_user_idTousers users      @relation("feed_posts_visits_visitor_user_idTousers", fields: [visitor_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_visits_visitor_user_id")
+}
+
+model feed_posts_votes {
+  id            BigInt     @id @default(autoincrement())
+  user_id       BigInt
+  post_id       BigInt
+  up            Boolean    @default(false)
+  down          Boolean    @default(false)
+  refresh_count Int        @default(0)
+  created_at    DateTime   @db.Timestamp(6)
+  updated_at    DateTime   @db.Timestamp(6)
+  feed_posts    feed_posts @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_votes_post_id")
+  users         users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_posts_votes_user_id")
+}
+
+model feed_report_types {
+  id           BigInt         @id @default(autoincrement())
+  key          String         @db.VarChar(64)
+  title        String         @db.VarChar(64)
+  description  String?        @db.VarChar(256)
+  level        Int            @default(0) @db.SmallInt
+  position     Int            @default(0) @db.SmallInt
+  created_at   DateTime       @db.Timestamp(6)
+  updated_at   DateTime       @db.Timestamp(6)
+  feed_reports feed_reports[]
+}
+
+model feed_reports {
+  id                                         BigInt              @id @default(autoincrement())
+  type_id                                    BigInt
+  reporter_user_id                           BigInt
+  reporter_message                           String?             @db.VarChar(256)
+  in_review                                  Boolean             @default(false)
+  in_review_since                            DateTime            @db.Timestamp(6)
+  is_closed                                  Boolean             @default(false)
+  closed_at                                  DateTime            @db.Timestamp(6)
+  moderation_id                              BigInt
+  member_user_id                             BigInt
+  member_feed_post_id                        BigInt
+  created_at                                 DateTime            @db.Timestamp(6)
+  updated_at                                 DateTime            @db.Timestamp(6)
+  feed_posts                                 feed_posts          @relation(fields: [member_feed_post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_member_post_id")
+  users_feed_reports_member_user_idTousers   users               @relation("feed_reports_member_user_idTousers", fields: [member_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_member_user_id")
+  members_moderations                        members_moderations @relation(fields: [moderation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_moderation_id")
+  users_feed_reports_reporter_user_idTousers users               @relation("feed_reports_reporter_user_idTousers", fields: [reporter_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_reporter_user_id")
+  feed_report_types                          feed_report_types   @relation(fields: [type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_feed_reports_type_id")
+
+  @@index([created_at], map: "idx_feed_reports_created_at")
+}
+
+model geo_continents {
+  id          BigInt        @id @default(autoincrement())
+  name        String        @unique(map: "uniq_geo_continents_name") @db.VarChar(64)
+  created_at  DateTime      @db.Timestamp(6)
+  updated_at  DateTime      @db.Timestamp(6)
+  geo_regions geo_regions[]
+}
+
+model geo_regions {
+  id             BigInt         @id @default(autoincrement())
+  continent_id   BigInt
+  name           String         @db.VarChar(64)
+  created_at     DateTime       @db.Timestamp(6)
+  updated_at     DateTime       @db.Timestamp(6)
+  admins         admins[]
+  feed_posts     feed_posts[]
+  geo_continents geo_continents @relation(fields: [continent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_geo_regions_continent")
+  members        members[]
+}
+
+model members {
+  id                     BigInt       @id @default(autoincrement())
+  uid                    BigInt       @unique(map: "uniq_members_uid")
+  user_id                BigInt       @unique
+  region_id              BigInt?
+  is_active              Boolean      @default(false)
+  is_banned              Boolean      @default(false)
+  following_count        Int          @default(0)
+  followers_count        Int          @default(0)
+  posts_count            Int          @default(0)
+  posts_votes_up_count   Int          @default(0)
+  posts_votes_down_count Int          @default(0)
+  created_at             DateTime     @db.Timestamp(6)
+  updated_at             DateTime     @db.Timestamp(6)
+  geo_regions            geo_regions? @relation(fields: [region_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_region")
+  users                  users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_user")
+}
+
+model members_access_logs {
+  id             BigInt   @id @default(autoincrement())
+  user_id        BigInt
+  is_terminated  Boolean  @default(false)
+  is_expired     Boolean  @default(false)
+  expires_at     DateTime @db.Timestamp(6)
+  refresh_count  Int      @default(0)
+  created_at     DateTime @db.Timestamp(6)
+  updated_at     DateTime @db.Timestamp(6)
+  ip_address     String?  @db.VarChar(45)
+  user_agent     String?
+  requests_count Int      @default(0)
+  payload        Json?    @db.Json
+  token          String
+  users          users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_access_logs_user_id")
+
+  @@index([expires_at], map: "idx_members_access_logs_expires_at")
+  @@index([token], map: "idx_members_access_logs_token")
+}
+
+model members_activation_codes {
+  id         BigInt   @id @default(autoincrement())
+  code       String   @unique(map: "uniq_members_activation_codes_code") @db.VarChar(64)
+  user_id    BigInt
+  is_active  Boolean  @default(false)
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_activation_codes_user_id")
+}
+
+model members_followers {
+  id                                              BigInt   @id @default(autoincrement())
+  user_id                                         BigInt
+  follower_user_id                                BigInt
+  created_at                                      DateTime @db.Timestamp(6)
+  updated_at                                      DateTime @db.Timestamp(6)
+  users_members_followers_follower_user_idTousers users    @relation("members_followers_follower_user_idTousers", fields: [follower_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_followers_follower_user_id")
+  users_members_followers_user_idTousers          users    @relation("members_followers_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_followers_user_id")
+}
+
+model members_following {
+  id                                               BigInt   @id @default(autoincrement())
+  user_id                                          BigInt
+  following_user_id                                BigInt
+  created_at                                       DateTime @db.Timestamp(6)
+  updated_at                                       DateTime @db.Timestamp(6)
+  users_members_following_following_user_idTousers users    @relation("members_following_following_user_idTousers", fields: [following_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_following_following_user_id")
+  users_members_following_user_idTousers           users    @relation("members_following_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_following_user_id")
+}
+
+model members_moderation_types {
+  id          BigInt   @id @default(autoincrement())
+  key         String   @unique(map: "uniq_members_moderation_types_key") @db.VarChar(64)
+  title       String   @db.VarChar(64)
+  description String   @db.VarChar(256)
+  position    Int      @default(0) @db.SmallInt
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @db.Timestamp(6)
+}
+
+model members_moderations {
+  id                                              BigInt         @id @default(autoincrement())
+  admin_user_id                                   BigInt
+  type_id                                         BigInt
+  is_applied                                      Boolean        @default(false)
+  expires_at                                      DateTime       @db.Timestamp(6)
+  is_on_member                                    Boolean        @default(false)
+  is_on_post                                      Boolean        @default(false)
+  member_user_id                                  BigInt?
+  member_feed_post_id                             BigInt?
+  created_at                                      DateTime       @db.Timestamp(6)
+  updated_at                                      DateTime       @db.Timestamp(6)
+  feed_reports                                    feed_reports[]
+  users_members_moderations_admin_user_idTousers  users          @relation("members_moderations_admin_user_idTousers", fields: [admin_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_moderations_admin_user_id")
+  feed_posts                                      feed_posts?    @relation(fields: [member_feed_post_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_moderations_member_feed_post_id")
+  users_members_moderations_member_user_idTousers users?         @relation("members_moderations_member_user_idTousers", fields: [member_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_moderations_member_user_id")
+
+  @@index([expires_at], map: "idx_members_moderations_expires_at")
+}
+
+model members_notification_types {
+  id                    BigInt                  @id @default(autoincrement())
+  key                   String                  @unique(map: "uniq_members_notification_types_key") @db.VarChar(64)
+  title                 String                  @db.VarChar(64)
+  message_singular      String                  @db.VarChar(512)
+  message_multiple      String                  @db.VarChar(512)
+  created_at            DateTime                @db.Timestamp(6)
+  updated_at            DateTime                @db.Timestamp(6)
+  members_notifications members_notifications[]
+}
+
+model members_notifications {
+  id                                                     BigInt                     @id @default(autoincrement())
+  notification_type_id                                   BigInt
+  user_id                                                BigInt
+  is_opened                                              Boolean                    @default(false)
+  opened_at                                              DateTime                   @db.Timestamp(6)
+  created_at                                             DateTime                   @db.Timestamp(6)
+  updated_at                                             DateTime                   @db.Timestamp(6)
+  message                                                String                     @db.VarChar(512)
+  last_member_user_id                                    BigInt
+  last_member_nickname                                   String                     @db.VarChar(32)
+  last_member_avatar                                     String?
+  users_members_notifications_last_member_user_idTousers users                      @relation("members_notifications_last_member_user_idTousers", fields: [last_member_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_notifications_last_member_user")
+  members_notification_types                             members_notification_types @relation(fields: [notification_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_notifications_notification_type")
+  users_members_notifications_user_idTousers             users                      @relation("members_notifications_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_notifications_user")
+
+  @@index([created_at], map: "idx_members_notifications_created_at")
+  @@index([opened_at], map: "idx_members_notifications_opened_at")
+}
+
+model members_profile {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt   @unique
+  nickname   String   @unique(map: "uniq_members_profile_nickname") @db.VarChar(32)
+  avatar     String?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_members_profile_user")
+}
+
+model users {
+  id                                                                     BigInt                     @id @default(autoincrement())
+  role                                                                   String                     @db.VarChar(16)
+  email                                                                  String                     @unique(map: "uniq_users_email") @db.VarChar(64)
+  email_verified_at                                                      DateTime?                  @db.Timestamp(6)
+  password                                                               String                     @db.VarChar(128)
+  created_at                                                             DateTime                   @db.Timestamp(6)
+  updated_at                                                             DateTime                   @db.Timestamp(6)
+  admins                                                                 admins[]
+  admins_access_logs                                                     admins_access_logs[]
+  admins_profile                                                         admins_profile[]
+  feed_posts                                                             feed_posts[]
+  feed_posts_visits_feed_posts_visits_user_idTousers                     feed_posts_visits[]        @relation("feed_posts_visits_user_idTousers")
+  feed_posts_visits_feed_posts_visits_visitor_user_idTousers             feed_posts_visits[]        @relation("feed_posts_visits_visitor_user_idTousers")
+  feed_posts_votes                                                       feed_posts_votes[]
+  feed_reports_feed_reports_member_user_idTousers                        feed_reports[]             @relation("feed_reports_member_user_idTousers")
+  feed_reports_feed_reports_reporter_user_idTousers                      feed_reports[]             @relation("feed_reports_reporter_user_idTousers")
+  members                                                                members[]
+  members_access_logs                                                    members_access_logs[]
+  members_activation_codes                                               members_activation_codes[]
+  members_followers_members_followers_follower_user_idTousers            members_followers[]        @relation("members_followers_follower_user_idTousers")
+  members_followers_members_followers_user_idTousers                     members_followers[]        @relation("members_followers_user_idTousers")
+  members_following_members_following_following_user_idTousers           members_following[]        @relation("members_following_following_user_idTousers")
+  members_following_members_following_user_idTousers                     members_following[]        @relation("members_following_user_idTousers")
+  members_moderations_members_moderations_admin_user_idTousers           members_moderations[]      @relation("members_moderations_admin_user_idTousers")
+  members_moderations_members_moderations_member_user_idTousers          members_moderations[]      @relation("members_moderations_member_user_idTousers")
+  members_notifications_members_notifications_last_member_user_idTousers members_notifications[]    @relation("members_notifications_last_member_user_idTousers")
+  members_notifications_members_notifications_user_idTousers             members_notifications[]    @relation("members_notifications_user_idTousers")
+  members_profile                                                        members_profile[]
+
+  @@index([email], map: "idx_users_email")
+}
