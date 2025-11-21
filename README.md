@@ -2,7 +2,7 @@
     <img src="./public/files/pr-banner-long.png">
 </div>
 
-![Project:Status](https://img.shields.io/badge/status-in%20development%20/%20built%2060%-orange?style=for-the-badge)
+![status](https://img.shields.io/badge/status-in%20development%20%2F%20built%2060%25-orange?style=for-the-badge)
 
 # SOCIAL FEED - NODEJS / NESTJS - PRISMA
 
