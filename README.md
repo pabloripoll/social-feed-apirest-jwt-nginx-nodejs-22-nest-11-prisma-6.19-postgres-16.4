@@ -7,29 +7,32 @@
 # SOCIAL FEED - NODEJS / NESTJS - PRISMA
 
 This repository contains a basic example of a RESTful API service built with **NestJS / Prisma**, intended for research purposes and as a demonstration of my developer profile. It implements the core features of a minimal, custom social feed application and serves as a reference project for learning, experimentation, or as a back-end development code sample.
+
+
+The documentation is oriented to use platform repository: [Platform Nginx NodeJS 24 + Postgres 18.2](https://github.com/pabloripoll/platforms-docker-nginx-nodejs-24-pgsql-18.2-mailhog-rabbitmq) - Follow its documentation to set the required platforms to continue with this repository
 <br><br>
 
+## Platform Stack
 
-## Stack
-
-- NodeJS 22
+- NodeJS 24 with NPM
 - NestJS 11
 - Prisma 6.19
-- Postgre 16.4
+- Postgre 18.2
 - MailHog 1.0
-- RabbitMQ 2.4 *(only available for pro version)*
+- RabbitMQ 4.2
 <br><br>
-
 
 ## Usage
 
-The documentation is oriented to use platform repository: [Platform Nginx Nodejs-22 Postgres-16.4](https://github.com/pabloripoll/docker-platform-nginx-nodejs-22-pgsql-16.4) - Follow its documentation to set the required platforms to continue with this repository
+Download [Platform Nginx NodeJS 24 + Postgres 18.2](https://github.com/pabloripoll/platforms-docker-nginx-nodejs-24-pgsql-18.2-mailhog-rabbitmq)
 
 On this project, before start copy `./.env.example` to `./.env` and configure it.
 
-Configure the supervisord service on the Platform Repository at `/platform/nginx-nodejs-22/docker/config/supervisord/config.d/`
+### Development
+
+If you need to watch the REST API in development mode, configure the supervisord service on the Platform Repository at `./platforms/nginx-nodejs-24/docker/config/supervisor/conf.d/nestjs-dev.conf`
 ```bash
-[program:nodejs] # service name can be customized [program:nestjs]
+[program:nestjs-dev]
 command=npx nest start --watch
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
@@ -39,77 +42,43 @@ autorestart=false
 startretries=0
 ```
 
-Then, access into the container to install required NodeJS packages
+Also configure `./platforms/nginx-nodejs-24/docker/config/nginx/conf.d-sample/default-proxy.conf` as `./platforms/nginx-nodejs-24/docker/config/nginx/conf.d/default.conf`
+
+### Static
+
+For running the REST API in static mode, configure the supervisord service on the Platform Repository at `./platforms/nginx-nodejs-24/docker/config/supervisor/conf.d/nestjs-spa.conf`
 ```bash
-$ make apirest-ssh
+[program:nestjs-spa]
+command=node ./dist/main.js
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+autorestart=false
+startretries=0
 ```
 
-Install project NodeJS packages with NPM
-```bash
-/var/www $ npm install
-/var/www $ npx prisma generate
-/var/www $ sudo supervisorctl restart nodejs
+In your package.json, add:
+```json
+{
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main.js"
+  }
+}
 ```
 
-In case of needing start Nest manually
-```bash
-/var/www $ sudo supervisorctl stop nodejs
-/var/www $ npx nest start --watch
-```
+Also configure `./platforms/nginx-nodejs-24/docker/config/nginx/conf.d-sample/default-spa.conf` as `./platforms/nginx-nodejs-24/docker/config/nginx/conf.d/default.conf`
 
-Sometimes IDEs need to restart typescript server:
-
-- VSCode `CTRL + SHIFT + P` then type: `restart TS Server`
-<br><br>
-
-## Migrations
-
-Set .env file and the generate schema.prisma
-```bash
-$ npx prisma generate
-```
-
-Prisma directory structure
-```
-.
-├── prisma
-│   ├── migrations
-│   │   ├── 20251001192103_create_users_table
-│   │   │   └── migration.sql
-│   │   ├── 20251001192254_create_...
-│   │   │   └── migration.sql
-│   │   .
-│   │
-│   └── schema.prisma
-.
-```
-
-Migrate tables insto database service container
-```bash
-/var/www $ npx prisma migrate deploy
-```
-
-Get database schema
-```bash
-/var/www $ npx prisma db pull --print > prisma/schema.prisma.preview
-```
-
-Review the schema and copy to `./prisma/schema.prisma`
-
-### Seeding
-
-```bash
-/var/www $ npx ts-node prisma/seed.ts
-Starting seeds...
-Seeding geo continents and regions...
-  processed continent: Europe (4 regions)
-  processed continent: Africa (5 regions)
-  processed continent: Americas (4 regions)
-  processed continent: Asia (5 regions)
-  processed continent: Oceania (4 regions)
-Geo seeding complete.
-Geo seed complete.
-```
+Why NOT npx nest start --watch in production?
+- The --watch flag keeps the TypeScript compiler running, wasting CPU
+- Requires @nestjs/cli as a dependency (unnecessary overhead)
+- Slower startup time
+- Higher memory consumption
+- Recompiles on file changes (production files shouldn't change)
 <br><br>
 
 ## Directories Structure Design
@@ -168,6 +137,99 @@ Suggested project layout (feature + layer separation)
 - Security: implement authentication/authorization as middleware/filters in http or infrastructure layer, not in domain.
 - Versioning: put /v1/ in route paths or package names if you plan public versioning.
 - Avoid CREATE TABLE IF EXISTS style workarounds for schema drift — keep DB migrations authoritative.
+<br><br>
+
+## Project Installation for Maintenance & Development
+
+Then, access into the container to install required NodeJS packages
+```bash
+$ make apirest-ssh
+```
+
+Install project NodeJS packages with NPM
+```bash
+/var/www $ npm install
+/var/www $ npx prisma generate
+/var/www $ sudo supervisorctl restart nestjs-dev
+```
+
+In case of needing start Nest manually
+```bash
+/var/www $ sudo supervisorctl stop nestjs-dev
+/var/www $ npx nest start --watch
+```
+
+Sometimes IDEs need to restart typescript server:
+
+- VSCode `CTRL + SHIFT + P` then type: `restart TS Server`
+<br><br>
+
+## Migrations
+
+Set .env file and the generate schema.prisma
+```bash
+$ npx prisma generate
+```
+
+Prisma directory structure
+```
+.
+├── prisma
+│   ├── migrations
+│   │   ├── 20251001192103_create_users_table
+│   │   │   └── migration.sql
+│   │   ├── 20251001192254_create_...
+│   │   │   └── migration.sql
+│   │   .
+│   │
+│   └── schema.prisma
+.
+```
+
+Migrate tables insto database service container
+```bash
+/var/www $ npx prisma migrate deploy
+```
+
+Get database schema
+```bash
+/var/www $ npx prisma db pull --print > prisma/schema.prisma.preview
+```
+
+Review the schema and copy to `./prisma/schema.prisma`
+
+### Seeding
+
+```bash
+/var/www $ npx ts-node prisma/seed.ts
+Starting seeds...
+Seeding geo continents and regions...
+  processed continent: Europe (4 regions)
+  processed continent: Africa (5 regions)
+  processed continent: Americas (4 regions)
+  processed continent: Asia (5 regions)
+  processed continent: Oceania (4 regions)
+Geo seeding complete.
+Geo seed complete.
+```
+<br><br>
+
+## Building
+
+Build your project
+```bash
+# Access into container
+$ make apirest-ssh
+
+# Inside container
+/var/www $ npm run build
+# or
+/var/www $ npx nest build
+```
+
+It will be generate a `./dist` directory. `./dist/main.js` is the REST API core
+
+Configure platforms to run **Static Scripts**
 <br><br>
 
 ## Contributing
