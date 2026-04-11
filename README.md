@@ -232,6 +232,26 @@ It will be generate a `./dist` directory. `./dist/main.js` is the REST API core
 Configure platforms to run **Static Scripts**
 <br><br>
 
+## Swagger
+
+```bash
+$ make apirest-info
+
+SOCIAL FEED NESTJS: NGINX - NODEJS 24
+Container ID.: d8b2245d019e
+Name.........: social-ntnj-apirest-dev
+Image........: social-ntnj-apirest-dev:alpine3.23-nginx1.28-nodejs24
+CPUs.........: 2.00
+RAM..........: 512M
+SWAP.........: 1G
+Host.........: 127.0.0.1:6300
+Hostname.....: 192.168.1.41:6300
+Docker.Host..: 172.18.0.2 # Docker internal IP assignated
+NetworkID....: fb9ec558d0dada3b0f64ce3195f924a9968d6651ce0dca1f9706937b9e0f7ee2
+```
+
+From the above example *(Docker Host)*: http://172.18.0.2:3000/api/docs
+
 ## Contributing
 
 Contributions are very welcome! Please open issues or submit PRs for improvements, new features, or bug fixes.
