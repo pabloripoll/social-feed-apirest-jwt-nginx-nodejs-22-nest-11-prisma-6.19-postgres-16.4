@@ -7,10 +7,10 @@ import { MemberActivationDto } from './../dto/member-activation.dto';
 import { MemberLoginDto } from './../dto/member-login.dto';
 import { MemberRegisterDto } from './../dto/member-register.dto';
 
-import { FeatureAuthService } from './../../../features/auth/feature-auth.service';
+import { AuthService } from './../../../features/auth/auth.service';
 import { PrismaService } from './../../../prisma/prisma.service';
 
-import { MemberAuthGuard } from '../../../features/auth/auth.guard';
+import { AuthGuard } from '../../../features/auth/auth.guard';
 import { randomAlphaNum, generateUniqueUid } from './../../../features/utils/random';
 
 
@@ -19,7 +19,7 @@ export class MemberAuthController {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly auth: FeatureAuthService,
+        private readonly auth: AuthService,
     ) { }
 
     // POST /api/v1/auth/register - (public)
@@ -179,8 +179,8 @@ export class MemberAuthController {
                 id: user.id,
                 role: user.role
             },
-            request.ip,
-            request.get('user-agent') ?? ''
+            /* request.ip,
+            request.get('user-agent') ?? '' */
         );
 
         return tokenData;
@@ -198,7 +198,7 @@ export class MemberAuthController {
         const user = await this.prisma.users.findUnique({ where: { id: access.user_id } });
         if (!user) throw { status: 401, message: 'Token user not found' };
 
-        const refreshed = await this.auth.signMemberToken({ id: user.id, role: user.role }, req.ip, req.get('user-agent') ?? '');
+        const refreshed = await this.auth.signMemberToken({ id: user.id, role: user.role });//, req.ip, req.get('user-agent') ?? ''
 
         await this.prisma.members_access_logs.update({
             where: { id: access.id },
@@ -224,7 +224,7 @@ export class MemberAuthController {
 
     // GET /api/v1/auth/whoami (authenticated member-only)
     @Get('whoami')
-    @UseGuards(MemberAuthGuard)
+    @UseGuards(AuthGuard)
     async whoami(@Req() req: any) {
         const user = await this.prisma.users.findUnique({
             where: {

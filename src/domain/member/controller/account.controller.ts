@@ -1,13 +1,13 @@
 import { Controller, Get, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from './../../../prisma/prisma.service';
-import { MemberAuthGuard } from '../../../features/auth/auth.guard';
+import { AuthGuard } from '../../../features/auth/auth.guard';
 
 @Controller('api/v1/account')
 export class MemberAccountController {
     constructor(private readonly prisma: PrismaService) { }
 
     @Get()
-    @UseGuards(MemberAuthGuard)
+    @UseGuards(AuthGuard)
     async account(@Req() req: any) {
         const user = await this.prisma.users.findUnique({ where: { id: req.user.id } });
         if (!user) {
@@ -21,7 +21,7 @@ export class MemberAccountController {
     }
 
     @Get('profile')
-    @UseGuards(MemberAuthGuard)
+    @UseGuards(AuthGuard)
     async profile(@Req() req: any) {
         const profile = await this.prisma.members_profile.findFirst({ where: { user_id: req.user.id } });
 
